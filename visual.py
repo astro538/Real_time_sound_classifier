@@ -3,6 +3,8 @@ import sys
 import time
 import threading
 
+
+
 from collections import deque
 from unittest import result
 
@@ -13,7 +15,69 @@ import tensorflow_hub as hub
 import pandas as pd
 import queue
 
+import requests
 
+ESP32_IP = "192.168.29.211"
+
+
+import requests
+
+
+# ============================================================
+# ESP32 SETTINGS
+# ============================================================
+
+
+#ESP32_URL = f"http://{ESP32_IP}/color"
+
+
+# ============================================================
+# SOUND → LED COLOR
+# ============================================================
+
+SOUND_COLORS = {
+
+    "Speech": "blue",
+
+    "Bark": "orange",
+
+    "Knock": "purple",
+
+    "Music": "green",
+
+    "Clapping": "yellow",
+
+    "Doorbell": "magenta",
+
+    "Alarm": "red",
+
+    "Noise": "off"
+}
+
+
+# ============================================================
+# SEND SOUND TO ESP32
+# ============================================================
+
+def send_sound_to_esp32(sound):
+
+    try:
+
+        url = f"http://{ESP32_IP}/sound"
+
+        response = requests.post(
+            url,
+            data=str(sound),
+            timeout=2
+        )
+
+        print(
+            f"[ESP32] Sent: {sound} | {response.text}"
+        )
+
+    except requests.exceptions.RequestException as e:
+
+        print(f"[ESP32 ERROR] {e}")
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -324,7 +388,7 @@ def classification_worker():
                         f"| confidence = {confidence:.2%}"
                     )
                     
-
+                send_sound_to_esp32(result)
                 last_displayed_class = result
 
             except Exception as e:
