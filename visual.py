@@ -18,6 +18,7 @@ import queue
 import requests
 
 ESP32_IP = "192.168.29.211"
+ECHOSENSE_API_URL = "http://127.0.0.1:8000/api/alert"
 
 
 import requests
@@ -56,28 +57,45 @@ SOUND_COLORS = {
 
 
 # ============================================================
-# SEND SOUND TO ESP32
+# SEND SOUND TO ECHOSENSE
 # ============================================================
 
-def send_sound_to_esp32(sound):
+def yamnet_event_type(sound):
+    """Translate YAMNet labels into the alert types used by EchoSense."""
+    label = sound.lower()
+
+    if "fire alarm" in label or "smoke alarm" in label or "smoke detector" in label:
+        return "FIRE"
+    if "doorbell" in label or "door bell" in label:
+        return "DOORBELL"
+    if "knock" in label:
+        return "KNOCK"
+    if "alarm" in label or "siren" in label:
+        return "ALARM"
+    return "SOUND"
+
+
+def send_sound_to_echosense(sound, confidence):
+    event_type = yamnet_event_type(sound)
 
     try:
-
-        url = f"http://{ESP32_IP}/sound"
-
         response = requests.post(
-            url,
-            data=str(sound),
+            ECHOSENSE_API_URL,
+            json={
+                "event": sound,
+                "event_type": event_type,
+                "confidence": confidence
+            },
             timeout=2
         )
 
         print(
-            f"[ESP32] Sent: {sound} | {response.text}"
+            f"[ECHOSENSE] Sent: {sound} ({event_type}) | {response.text}"
         )
 
     except requests.exceptions.RequestException as e:
 
-        print(f"[ESP32 ERROR] {e}")
+        print(f"[ECHOSENSE ERROR] {e}")
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -388,7 +406,7 @@ def classification_worker():
                         f"| confidence = {confidence:.2%}"
                     )
                     
-                send_sound_to_esp32(result)
+                send_sound_to_echosense(result, confidence)
                 last_displayed_class = result
 
             except Exception as e:
